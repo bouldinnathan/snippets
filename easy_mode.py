@@ -1,12 +1,11 @@
 #This is a file for easy imports and easy threading
-#version 0.5
+#version 0.6
 
 #function of import and install
 # Easy_installer.easy("flask") Easy_installer.easy("https://github.com")
+import os
+import subprocess
 class Easy_installer:
-    import os
-    import subprocess
-
     
     def __init__(self):
         import subprocess
@@ -153,8 +152,9 @@ def generic_threader(function_name,datas,thread_count=16):
     return all_threads_datas
                 
 ###########################################################################
-
-### this is used to read almost any text file with its correct charset
+# this is used to read almost any text file with its correct charset
+# given file location and optional check regular expression or
+# number of requested charectors if the file is large
 def read_file(file_loc,number_of_char=True, check_re=""):
 
     def checker2(text):
@@ -217,8 +217,90 @@ def read_file(file_loc,number_of_char=True, check_re=""):
     #raise Exception (str(file_loc)+" : No Text encoding found")
     return ""
 
-########################################################################
+###########################################################################
+# this is used to make multithreaded calls to exchanges 
+# these calls are not rate limited. This class depends of generic_threader
+#
 
+class Crypto:
+    
+    def __init__(self,):
+        import asyncio
+        import os
+        import sys
+        import platform
+        
+        if platform.system()=='Windows':
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+        root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        sys.path.append(root + '/python')
+        
+        pass
+
+    #simplified called by removing async
+    def get_single_symbol_exchange(self,symbol,exchange_id):# 'binance','BTC/USDC'
+        import asyncio
+        import ccxt.async_support as ccxt
+        
+        async def get_single_symbol_exchange_async(symbol, exchange_id): # 'binance','BTC/USDC'
+            try:
+                exchange = getattr(ccxt, exchange_id)()
+                ticker = await exchange.fetch_ticker(symbol)
+                await exchange.close()
+                return {exchange_id:ticker}
+            except Exception as e:
+                await exchange.close()
+                return {exchange_id:None}
+            return {exchange_id:None}
+        
+        return asyncio.run(get_single_symbol_exchange_async(symbol, exchange_id))#[('gate':{dict_returned})] or [('binance':None)]
+        
+
+
+    # this is the function used by generic threader to multi-thread
+    def get_multiple_symbol_exchange_combined(self,data): #('binance','BTC/USDC') or ('gate','ETH/USDC')  
+        symbol, exchange_id=data
+        return self.get_single_symbol_exchange(symbol, exchange_id)#[('gate':{dict_returned})] or [('binance':None)]
+
+    # this function increase types of inputs and prepares data for threading
+    # Most external calls should be made here
+    def get_simple(self,symbols, exchange_ids=None):#['BTC/USDC','ETH/USDC'],['gate','binance']
+        import ccxt.async_support as ccxt
+
+        
+        if exchange_ids==None:exchange_ids=ccxt.exchanges # all exchanges are selected if no exchange is give
+        datas=[]
+        
+        if (type(symbols)==type([]) or type(symbols)==type(())) and (type(exchange_ids)==type([]) or type(exchange_ids)==type(())):# only accepts two lists/tuples
+            for symbol in symbols:
+                for exchange_id in exchange_ids:
+                    datas.append((symbol,exchange_id))
+        if type(symbols)==type("") and (type(exchange_ids)==type([]) or type(exchange_ids)==type(())):# only accepts one string and one list/tuple
+            symbol=symbols
+            for exchange_id in exchange_ids:
+                datas.append((symbol,exchange_id))
+        if (type(symbols)==type([]) or type(symbols)==type(())) and type(exchange_ids)==type(""):# only accepts one list/tuple and one string
+            exchange_id=exchange_ids
+            for symbol in symbols:
+                datas.append((symbol,exchange_id))
+        if type(symbols)==type("") and type(exchange_ids)==type(""):# only accepts two strings
+            exchange_id=exchange_ids
+            symbol=symbols
+            datas.append((symbol,exchange_id))
+            
+                         
+        temp=easy_mode.generic_threader(self.get_multiple_symbol_exchange_combined,datas)
+        return temp #[('gate':{dict_returned}),('binance':None)]
+
+    def get_exchanges():
+        import ccxt.async_support as ccxt
+        return exchange_ids=ccxt.exchanges
+
+    def help():
+        temp="get_exchanges() returns list of exchanges get_simple returns data on symbols from exchanges symbols='' or [] exchange_ids='' or [] or None(default)"
+        print(temp)
+        return temp
 
 
 
