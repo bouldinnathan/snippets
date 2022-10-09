@@ -295,12 +295,12 @@ class Crypto:
 
     def get_exchanges():
         import ccxt.async_support as ccxt
-        return exchange_ids=ccxt.exchanges
+        exchange_ids=ccxt.exchanges
+        return exchange_ids
 
     def help():
         temp="get_exchanges() returns list of exchanges get_simple returns data on symbols from exchanges symbols='' or [] exchange_ids='' or [] or None(default)"
         print(temp)
         return temp
-
 
 
