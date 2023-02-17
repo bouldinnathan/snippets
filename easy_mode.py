@@ -1,5 +1,5 @@
 #This is a file for easy imports and easy threading
-#version 0.6
+#version 0.7
 
 #function of import and install
 # Easy_installer.easy("flask") Easy_installer.easy("https://github.com")
@@ -16,7 +16,8 @@ class Easy_installer:
                 deprint('calling getconf failed - error:', traceback=True)
                 MAX_PATH = 4096
             except:
-                print("MAX_PATH had and issue...")
+                pass
+                #print("MAX_PATH had and issue...")
         try:_=os.system("sudo apt -y install python3-pip")
         except:pass
         try:_=os.system("sudo apt -y install git")
@@ -96,17 +97,36 @@ class Easy_installer:
 # the list is iterated into the your function
 # once all data is process the full data is returned
 # data must be returned by the function to be threaded
-def generic_threader(function_name,datas,thread_count=16):
+def target(conn,funtion_to_thread,tuple_of_data,qu_bool=False):
+    #print("target",flush=True)
+    #print("target qu_bool: "+str(qu_bool),flush=True)
+    if qu_bool:
+        _=funtion_to_thread(tuple_of_data)
+        #print(_,flush=True)
+        conn.put(_)
+    else:
+        conn.send(funtion_to_thread(tuple_of_data))
+        conn.close()
+
+
+def generic_threader(function_name,datas,thread_count=16,cpu=False,qu_bool=False):
     
     #import zipfile
     import os
     from threading import Thread
     from  multiprocessing import Pipe
-    #import shutil
-    
+    from  multiprocessing import Process# remove if bad
+    import multiprocessing
+    from  multiprocessing import Queue# remove if bad
 
-    def target(conn,funtion_to_thread,tuple_of_data):
-        conn.send(funtion_to_thread(tuple_of_data))
+    qu = Queue()
+
+    
+    #import shutil
+
+
+    #def target(conn,funtion_to_thread,tuple_of_data):
+    #    conn.send(funtion_to_thread(tuple_of_data))
         
     total_processed=0     
     count=0
@@ -121,17 +141,34 @@ def generic_threader(function_name,datas,thread_count=16):
         
         parent_conn, child_conn =Pipe()
         
-        t = Thread(target=target, args=(child_conn, function_name, data))
+        if cpu==True and qu_bool==True:
+            print("Windows box may not work... TODO: add core adjusted affenity")
+            t = Process(target=target, args=(qu, function_name, data,qu_bool))
+            current_working_threads.append((t,qu,qu_bool))
+        elif cpu==True and qu_bool==False:
+            print("Windows box may not work... TODO: add core adjusted affenity")
+            t = Process(target=target, args=(child_conn, function_name, data,qu_bool))
+            current_working_threads.append((t,parent_conn,qu_bool))
+        elif cpu==False and qu_bool==False:
+            t = Thread(target=target, args=(child_conn, function_name, data,qu_bool))
+            current_working_threads.append((t,parent_conn,qu_bool))
+        elif cpu==False and qu_bool==True:
+            t = Thread(target=target, args=(qu, function_name, data,qu_bool))
+            current_working_threads.append((t,qu,qu_bool))
+            
         t.start()
-        
-        current_working_threads.append((t,parent_conn,child_conn))    
+            
 
         # limits Number of threads by forcing join every time thread count is a multible of thread_count
         if count%thread_count==0 or count>=total_amount_of_data:
 
             # collects all of the data to be return at the end
-            for t,parent_conn,child_conn in current_working_threads:
-                all_threads_datas.append(parent_conn.recv())
+            for t,parent_conn,qu_bool in current_working_threads:
+                if qu_bool:
+                    while not parent_conn.empty():
+                        all_threads_datas.append(parent_conn.get())
+                else:
+                    all_threads_datas.append(parent_conn.recv())
                 t.join()
                 
             # garbage collection
@@ -148,8 +185,12 @@ def generic_threader(function_name,datas,thread_count=16):
         
     # garbage collection
     current_working_threads=[]
-    print("Total Processed: "+str(total_processed))
+    print("Total Processed: "+str(len(datas)))
     return all_threads_datas
+
+def gt(function_name,datas,thread_count=16,cpu=False,qu_bool=False): # shorthand
+    return generic_threader(function_name,datas,thread_count=thread_count,cpu=cpu,qu_bool=qu_bool)
+    
                 
 ###########################################################################
 # this is used to read almost any text file with its correct charset
@@ -295,12 +336,12 @@ class Crypto:
 
     def get_exchanges():
         import ccxt.async_support as ccxt
-        exchange_ids=ccxt.exchanges
-        return exchange_ids
+        return ccxt.exchanges
 
     def help():
         temp="get_exchanges() returns list of exchanges get_simple returns data on symbols from exchanges symbols='' or [] exchange_ids='' or [] or None(default)"
         print(temp)
         return temp
+
 
 
