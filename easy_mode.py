@@ -1,5 +1,5 @@
 #This is a file for easy imports and easy threading
-#version 0.7
+#version 0.7.5
 
 #function of import and install
 # Easy_installer.easy("flask") Easy_installer.easy("https://github.com")
@@ -108,8 +108,23 @@ def target(conn,funtion_to_thread,tuple_of_data,qu_bool=False):
         conn.send(funtion_to_thread(tuple_of_data))
         conn.close()
 
+def cpuChk(seconds):
+    import time
+    try:
+        import psutil
+    except:
+        return None
+    if psutil.LINUX:
+        # Linux-specific code
+        return psutil.cpu_percent(interval=seconds)
+    elif psutil.WINDOWS:
+        # Windows-specific code
+        return psutil.cpu_percent(interval=seconds)
+    else:
+        return None  # Unsupported platform
 
-def generic_threader(function_name,datas,thread_count=16,cpu=False,qu_bool=False):
+
+def generic_threader(function_name,datas,thread_count=16,max_cpu_percent=80,cpu=False,qu_bool=False):
     
     #import zipfile
     import os
@@ -155,7 +170,9 @@ def generic_threader(function_name,datas,thread_count=16,cpu=False,qu_bool=False
         elif cpu==False and qu_bool==True:
             t = Thread(target=target, args=(qu, function_name, data,qu_bool))
             current_working_threads.append((t,qu,qu_bool))
-            
+
+        if max_cpu_percent!=0:
+            while cpuChk(.2)>=max_cpu_percent:pass
         t.start()
             
 
@@ -182,14 +199,15 @@ def generic_threader(function_name,datas,thread_count=16,cpu=False,qu_bool=False
     for t,parent_conn,child_conn in current_working_threads:
         all_threads_datas.append(parent_conn.recv())
         t.join()
+
         
     # garbage collection
     current_working_threads=[]
     print("Total Processed: "+str(len(datas)))
     return all_threads_datas
 
-def gt(function_name,datas,thread_count=16,cpu=False,qu_bool=False): # shorthand
-    return generic_threader(function_name,datas,thread_count=thread_count,cpu=cpu,qu_bool=qu_bool)
+def gt(function_name,datas,thread_count=16,max_cpu_percent=80,cpu=False,qu_bool=False): # shorthand
+    return generic_threader(function_name,datas,thread_count=thread_count,max_cpu_percent=max_cpu_percent,cpu=cpu,qu_bool=qu_bool)
     
                 
 ###########################################################################
@@ -342,6 +360,3 @@ class Crypto:
         temp="get_exchanges() returns list of exchanges get_simple returns data on symbols from exchanges symbols='' or [] exchange_ids='' or [] or None(default)"
         print(temp)
         return temp
-
-
-
