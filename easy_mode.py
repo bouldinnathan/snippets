@@ -1,5 +1,5 @@
 #This is a file for easy imports and easy threading
-#version 0.7.5
+#version 0.7.6
 
 #function of import and install
 # Easy_installer.easy("flask") Easy_installer.easy("https://github.com")
@@ -275,6 +275,65 @@ def read_file(file_loc,number_of_char=True, check_re=""):
     #print( str(file_loc)+" : No Text encoding found")
     #raise Exception (str(file_loc)+" : No Text encoding found")
     return ""
+
+###################################################################################################################
+#             Simple API Generator Creator
+# Add one item to be processed at a time with a "url" "headers" and a minimum "timer" between call to rate limit
+# Add_list add all item to be processed at the same time [{"url":url,"headers":headers,"timer",timer},...]
+# Call_api is a generator that yeild the data as a json one at a time
+# Get returns the same infomation as yeild just with a simple return
+#
+###################################################################################################################
+class api_gen:
+    #api_data={}
+    apis=[]
+    get_first_run=True
+    get_next=None
+
+
+    def __init__(self):
+        self.get_first_run=True
+        self.get_next=None
+        self.apis=[]
+        pass
+
+        
+    #this function creates a generator that yeld 
+    def add(self,url,headers="",timer):
+        api_data={"url":url,"headers":headers,"timer":timer}
+        self.apis.append(api_data)
+
+    def add_list(self,api_data_list):
+        self.apis.extend(api_data_list)#[{"url":url,"headers":headers,"timer",timer},...]
+
+    def call_api (self):
+        from time import sleep 
+        import requests
+
+        if len(self.apis)==0:
+            yield None
+
+        for api_data in self.apis:
+            url=api_data["url"]
+            headers=api_data["headers"]
+            response = requests.get(url, headers=headers)
+            data = response.json()
+            
+            sleep(api_data["timer"])
+            yield data
+        self.apis=[]
+
+    def get(self):
+        if self.get_first_run:    
+            self.get_next=self.call_api()
+            self.get_first_run=False
+        try:
+            return next(self.get_next)
+        except StopIteration:
+            return None
+    def get_queue(self):
+        return self.apis
+
 
 ###########################################################################
 # this is used to make multithreaded calls to exchanges 
