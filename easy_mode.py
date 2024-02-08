@@ -1,5 +1,5 @@
 #This is a file for easy imports and easy threading
-#version 0.7.6
+#version 0.7.7
 
 #function of import and install
 # Easy_installer.easy("flask") Easy_installer.easy("https://github.com")
@@ -108,23 +108,8 @@ def target(conn,funtion_to_thread,tuple_of_data,qu_bool=False):
         conn.send(funtion_to_thread(tuple_of_data))
         conn.close()
 
-def cpuChk(seconds):
-    import time
-    try:
-        import psutil
-    except:
-        return None
-    if psutil.LINUX:
-        # Linux-specific code
-        return psutil.cpu_percent(interval=seconds)
-    elif psutil.WINDOWS:
-        # Windows-specific code
-        return psutil.cpu_percent(interval=seconds)
-    else:
-        return None  # Unsupported platform
 
-
-def generic_threader(function_name,datas,thread_count=16,max_cpu_percent=80,cpu=False,qu_bool=False):
+def generic_threader(function_name,datas,thread_count=16,cpu=False,qu_bool=False):
     
     #import zipfile
     import os
@@ -170,9 +155,7 @@ def generic_threader(function_name,datas,thread_count=16,max_cpu_percent=80,cpu=
         elif cpu==False and qu_bool==True:
             t = Thread(target=target, args=(qu, function_name, data,qu_bool))
             current_working_threads.append((t,qu,qu_bool))
-
-        if max_cpu_percent!=0:
-            while cpuChk(.2)>=max_cpu_percent:pass
+            
         t.start()
             
 
@@ -199,15 +182,14 @@ def generic_threader(function_name,datas,thread_count=16,max_cpu_percent=80,cpu=
     for t,parent_conn,child_conn in current_working_threads:
         all_threads_datas.append(parent_conn.recv())
         t.join()
-
         
     # garbage collection
     current_working_threads=[]
     print("Total Processed: "+str(len(datas)))
     return all_threads_datas
 
-def gt(function_name,datas,thread_count=16,max_cpu_percent=80,cpu=False,qu_bool=False): # shorthand
-    return generic_threader(function_name,datas,thread_count=thread_count,max_cpu_percent=max_cpu_percent,cpu=cpu,qu_bool=qu_bool)
+def gt(function_name,datas,thread_count=16,cpu=False,qu_bool=False): # shorthand
+    return generic_threader(function_name,datas,thread_count=thread_count,cpu=cpu,qu_bool=qu_bool)
     
                 
 ###########################################################################
@@ -275,65 +257,6 @@ def read_file(file_loc,number_of_char=True, check_re=""):
     #print( str(file_loc)+" : No Text encoding found")
     #raise Exception (str(file_loc)+" : No Text encoding found")
     return ""
-
-###################################################################################################################
-#             Simple API Generator Creator
-# Add one item to be processed at a time with a "url" "headers" and a minimum "timer" between call to rate limit
-# Add_list add all item to be processed at the same time [{"url":url,"headers":headers,"timer",timer},...]
-# Call_api is a generator that yeild the data as a json one at a time
-# Get returns the same infomation as yeild just with a simple return
-#
-###################################################################################################################
-class api_gen:
-    #api_data={}
-    apis=[]
-    get_first_run=True
-    get_next=None
-
-
-    def __init__(self):
-        self.get_first_run=True
-        self.get_next=None
-        self.apis=[]
-        pass
-
-        
-    #this function creates a generator that yeld 
-    def add(self,url,headers="",timer):
-        api_data={"url":url,"headers":headers,"timer":timer}
-        self.apis.append(api_data)
-
-    def add_list(self,api_data_list):
-        self.apis.extend(api_data_list)#[{"url":url,"headers":headers,"timer",timer},...]
-
-    def call_api (self):
-        from time import sleep 
-        import requests
-
-        if len(self.apis)==0:
-            yield None
-
-        for api_data in self.apis:
-            url=api_data["url"]
-            headers=api_data["headers"]
-            response = requests.get(url, headers=headers)
-            data = response.json()
-            
-            sleep(api_data["timer"])
-            yield data
-        self.apis=[]
-
-    def get(self):
-        if self.get_first_run:    
-            self.get_next=self.call_api()
-            self.get_first_run=False
-        try:
-            return next(self.get_next)
-        except StopIteration:
-            return None
-    def get_queue(self):
-        return self.apis
-
 
 ###########################################################################
 # this is used to make multithreaded calls to exchanges 
@@ -419,3 +342,257 @@ class Crypto:
         temp="get_exchanges() returns list of exchanges get_simple returns data on symbols from exchanges symbols='' or [] exchange_ids='' or [] or None(default)"
         print(temp)
         return temp
+
+
+
+def move_contents_up_one_level(directory,replace=True):
+    """
+    Move all files and folders within the given directory up one level.
+    
+    :param directory: The directory whose contents are to be moved.
+    """
+    easy=Easy_installer()#required to make class
+    easy.easy("shutil")
+    import shutil
+    import os
+    # Check if directory exists and is a directory
+    if not os.path.exists(directory) or not os.path.isdir(directory):
+        raise ValueError(f"'{directory}' is not a valid directory path.")
+    
+    parent_directory = os.path.dirname(directory)
+    
+    # If the parent directory is same as the directory, it means the directory is a root directory
+    if parent_directory == directory:
+        raise ValueError(f"Can't move files and folders up from the root directory: {directory}")
+    
+    for item_name in os.listdir(directory):
+        item_path = os.path.join(directory, item_name)
+        destination_path = os.path.join(parent_directory, item_name)
+
+        # If a file/folder with the same name already exists in the destination, rename the item to avoid conflict
+        counter = 1
+        while os.path.exists(destination_path) and not replace:
+            base, extension = os.path.splitext(item_name)
+            if os.path.isdir(item_path):  # if the item is a folder
+                new_name = f"{base}_{counter}"
+            else:  # if the item is a file
+                new_name = f"{base}_{counter}{extension}"
+            destination_path = os.path.join(parent_directory, new_name)
+            counter += 1
+
+        shutil.move(item_path, destination_path)
+
+
+
+    
+###########################################################################
+# this is used to make download the newest driver for chrome for selenium
+# This function depends of easy_installer/download_files/flatten to download correct import zipfile and process.
+# return list of possible exicutibles depending on import platform and tries 
+# to return only one. ["chrome.exe"]
+def download_file(url):
+    import requests
+    local_filename = url.split('/')[-1]
+    # NOTE the stream=True parameter below
+    with requests.get(url, stream=True) as r:
+        r.raise_for_status()
+        with open(local_filename, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=8192): 
+                # If you have chunk encoded response uncomment if
+                # and set chunk_size parameter to None.
+                #if chunk: 
+                f.write(chunk)
+    return local_filename
+
+def flatten(l):
+    return [item for sublist in l for item in sublist]
+
+def selenium_prep(version="Latest"):
+    import requests
+    import platform
+    import sys
+    from selenium import webdriver
+
+    try:version_num=int(version.split(".")[0])
+    except:version_num=9999999
+
+    #print(version_num)
+    driver="chromedriver.exe"
+
+    def _check(driver_loc="chromedriver.exe"):
+
+        try:
+            driver_loc="chromedriver.exe"
+            temp_driver=webdriver.Chrome(driver_loc)
+            temp_driver.quit()
+            return True
+        except:
+            return False
+
+    if _check():
+        print("Download was skipped...")
+        webdriver.Chrome(driver)
+        return driver
+    
+    #import Easy_installer #only require if function is not in easymode
+    easy=Easy_installer()#required to make class
+
+    if sys.version_info >= (3, 9):
+        easy.easy("zipfile39")
+        import zipfile39 as zipfile
+    elif sys.version_info >= (3, 8):
+        easy.easy("zipfile38")
+        import zipfile38 as zipfile
+    elif sys.version_info >= (3, 7):
+        easy.easy("zipfile37")
+        import zipfile37 as zipfile
+    elif sys.version_info >= (3, 6):
+        easy.easy("zipfile36")
+        import zipfile36 as zipfile
+    else:
+        easy.easy("zipfile")
+        import zipfile
+    
+
+
+
+
+    #####################New Chrome Drivers###################    
+    download_options=["chromedriver-linux64.zip","chromedriver-mac-x64.zip","chromedriver-mac-arm64.zip","chromedriver-win64.zip"]#"chromedriver-win32.zip"
+
+    
+    if version_num>114:
+        x = requests.get('https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_STABLE')
+        print(x.text)
+
+        root_URL='''https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/'''
+        possible_drivers=[]
+
+        if "win" in platform.system().lower():
+            download_option = [x for x in download_options if "win" in x]
+            temp=root_URL+x.text+'''/'''+str(download_option[0]).replace("chromedriver-","").replace(".zip","")+'''/'''+str(download_option[0])
+            print(temp)
+            x = download_file(temp)
+            with zipfile.ZipFile(temp.split('''/''')[-1],"r") as zip_ref:
+                zip_ref.extractall(path=None, members=None, pwd=None)
+                
+        elif "linux" in platform.system().lower():
+            download_option = [x for x in download_options if "linux" in x]
+            temp=root_URL+x.text+'''/'''+str(download_option[0]).replace("chromedriver-","").replace(".zip","")+'''/'''+str(download_option[0])
+            print(temp)
+            x = download_file(temp)
+            with zipfile.ZipFile(temp.split('''/''')[-1],"r") as zip_ref:
+                zip_ref.extractall(path=None, members=None, pwd=None)
+            
+        elif "arm" in platform.system().lower():
+            download_option = [x for x in download_options if "arm" in x]
+            temp=root_URL+x.text+'''/'''+str(download_option[0]).replace("chromedriver-","").replace(".zip","")+'''/'''+str(download_option[0])
+            print(temp)
+            x = download_file(temp)
+            with zipfile.ZipFile(temp.split('''/''')[-1],"r") as zip_ref:
+                zip_ref.extractall(path=None, members=None, pwd=None)
+                
+        elif "mac" in platform.system().lower():
+            download_option = [x for x in download_options if "mac" in x]
+            temp=root_URL+x.text+'''/'''+str(download_option[0]).replace("chromedriver-","").replace(".zip","")+'''/'''+str(download_option[0])
+            print(temp)
+            x = download_file(temp)
+            with zipfile.ZipFile(temp.split('''/''')[-1],"r") as zip_ref:
+                zip_ref.extractall(path=None, members=None, pwd=None)
+
+        else:
+            for download_option in download_options:
+                temp=root_URL+x.text+'''/'''+str(download_option[0]).replace("chromedriver-","").replace(".zip","")+'''/'''+str(download_option[0])
+                print(temp)
+                x = download_file(temp)
+                with zipfile.ZipFile(temp.split('''/''')[-1],"r") as zip_ref:
+                    zip_ref.extractall(path=None, members=None, pwd=None)
+                    possible_drivers.append(zip_ref.namelist())
+
+
+        extract_loc=str(download_option[0]).replace(".zip","")
+        move_contents_up_one_level(extract_loc)
+
+        #possible_drivers.append(zip_ref.namelist())
+        #driver=[i for i in flatten(possible_drivers) if not "LICENSE" in i]
+        #driver=driver[0]
+
+        if _check():return driver
+
+
+
+
+
+
+
+
+    ####################Old Chrome Drivers######################
+    download_options=["chromedriver_linux64.zip","chromedriver_mac64.zip","chromedriver_mac_arm64.zip","chromedriver_win32.zip"]
+
+    
+    if version_num<=114:
+        x = requests.get('https://chromedriver.storage.googleapis.com/LATEST_RELEASE')
+        #x = requests.get('https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_STABLE')
+        print(x.text)
+
+        possible_drivers=[]
+
+        if "win" in platform.system().lower():
+            download_option = [x for x in download_options if "win" in x]
+            temp='https://chromedriver.storage.googleapis.com/'+x.text+'''/'''+str(download_option[0])
+            print(temp)
+            x = download_file(temp)
+            with zipfile.ZipFile(temp.split('''/''')[-1],"r") as zip_ref:
+                zip_ref.extractall(path=None, members=None, pwd=None)
+                
+        elif "linux" in platform.system().lower():
+            download_option = [x for x in download_options if "linux" in x]
+            temp='https://chromedriver.storage.googleapis.com/'+x.text+'''/'''+str(download_option[0])
+            print(temp)
+            x = download_file(temp)
+            with zipfile.ZipFile(temp.split('''/''')[-1],"r") as zip_ref:
+                zip_ref.extractall(path=None, members=None, pwd=None)
+            
+        elif "arm" in platform.system().lower():
+            download_option = [x for x in download_options if "arm" in x]
+            temp='https://chromedriver.storage.googleapis.com/'+x.text+'''/'''+str(download_option[0])
+            print(temp)
+            x = download_file(temp)
+            with zipfile.ZipFile(temp.split('''/''')[-1],"r") as zip_ref:
+                zip_ref.extractall(path=None, members=None, pwd=None)
+                
+        elif "mac" in platform.system().lower():
+            download_option = [x for x in download_options if "mac" in x]
+            temp='https://chromedriver.storage.googleapis.com/'+x.text+'''/'''+str(download_option[0])
+            print(temp)
+            x = download_file(temp)
+            with zipfile.ZipFile(temp.split('''/''')[-1],"r") as zip_ref:
+                zip_ref.extractall(path=None, members=None, pwd=None)
+
+        else:
+            for download_option in download_options:
+                temp='https://chromedriver.storage.googleapis.com/'+x.text+'''/'''+str(download_option[0])
+                print(temp)
+                x = download_file(temp)
+                with zipfile.ZipFile(temp.split('''/''')[-1],"r") as zip_ref:
+                    zip_ref.extractall(path=None, members=None, pwd=None)
+                    possible_drivers.append(zip_ref.namelist())
+                    
+                
+        possible_drivers.append(zip_ref.namelist())
+        driver=[i for i in flatten(possible_drivers) if not "LICENSE" in i]
+
+        driver=driver[0]
+        return driver
+
+
+    return driver
+
+    
+
+
+
+
+
+
+
