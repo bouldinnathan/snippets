@@ -33,6 +33,7 @@ class Easy_installer:
             import importlib
             try:
                 importlib.import_module(package)
+                return 
             except ImportError:
                 import pip
                 try:
@@ -76,10 +77,11 @@ class Easy_installer:
         
 
     def easy(self,url,import_name=None,easy_command=None):
-        if type(import_name)==type(None) and not type(easy_command)==type(None):
+        if ("http" in url or "www." in url) and type(import_name)==type(None) and not type(easy_command)==type(None):
             self.install_and_import_special(url,command=easy_command)
         elif not type(import_name)==type(None) and type(easy_command)==type(None):
-            self.install_and_import(url)
+            try:self.install_and_import(import_name)
+            except:self.install_and_import(url)
             self.install_and_import(import_name)
         elif not type(import_name)==type(None) and not type(easy_command)==type(None):
             self.install_and_import_special(url,command=easy_command)
@@ -483,10 +485,15 @@ def flatten(l):
     return [item for sublist in l for item in sublist]
 
 def selenium_prep(version="Latest"):
+    easy=Easy_installer()
     import requests
-    import platform
+    try:import platform
+    except:easy.easy("platform")
     import sys
-    from selenium import webdriver
+    try:from selenium import webdriver
+    except:
+        easy.easy("selenium")
+        from selenium import webdriver
 
     try:version_num=int(version.split(".")[0])
     except:version_num=9999999
@@ -506,8 +513,7 @@ def selenium_prep(version="Latest"):
 
     if _check():
         print("Download was skipped...")
-        webdriver.Chrome(driver)
-        return driver
+        return webdriver.Chrome(driver)
     
     #import Easy_installer #only require if function is not in easymode
     easy=Easy_installer()#required to make class
