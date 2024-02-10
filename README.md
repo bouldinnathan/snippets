@@ -84,7 +84,8 @@ print(result)
 from easy_mode import selenium_prep
 
 # Download and setup Selenium WebDriver
-driver_path = selenium_prep(version="Latest")
+driver = selenium_prep(version="Latest")
+driver.get("https://google.com")
 ```
 
 ## Contributing
