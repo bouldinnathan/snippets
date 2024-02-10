@@ -296,7 +296,7 @@ class api_gen:
 
 
     #this function creates a generator that yeld 
-    def add(self,url,headers="",timer):
+    def add(self,url,headers="",timer=0):
         api_data={"url":url,"headers":headers,"timer":timer}
         self.apis.append(api_data)
 
@@ -592,7 +592,7 @@ def selenium_prep(version="Latest"):
         #driver=[i for i in flatten(possible_drivers) if not "LICENSE" in i]
         #driver=driver[0]
 
-        if _check():return driver
+        if _check():return webdriver.Chrome(driver)
 
 
 
@@ -658,10 +658,10 @@ def selenium_prep(version="Latest"):
         driver=[i for i in flatten(possible_drivers) if not "LICENSE" in i]
 
         driver=driver[0]
-        return driver
+        return webdriver.Chrome(driver)
 
 
-    return driver
+    return webdriver.Chrome(driver)
 
     
 
