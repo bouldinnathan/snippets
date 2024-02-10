@@ -26,7 +26,11 @@ from easy_mode import Easy_installer
 
 # To install a package
 installer = Easy_installer()
-installer.easy("package_name")
+installer.easy("selenium")
+installer.easy("platform")
+
+# To install where import name and pip install name are different
+installer.easy("beautifulsoup4",import_name="bs4")
 
 # To install from a URL
 installer.easy("https://github.com/example_repo")
