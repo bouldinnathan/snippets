@@ -24,6 +24,8 @@ class Easy_installer:
         except:pass
         try:_=os.system("sudo apt -y install python3-dev ")
         except:pass
+        try:_=os.system("sudo apt -y install python3-full ")
+        except:pass
         
     
     
@@ -52,7 +54,7 @@ class Easy_installer:
                     main(['install', package])
                     globals()[package] = importlib.import_module(package)
                 except:
-                    main(['install',"--no-cache-dir", package])
+                    main(['install',"--no-cache-dir","--break-system-packages", package])
                     
             finally:
                 globals()[package] = importlib.import_module(package)
@@ -670,6 +672,7 @@ def selenium_prep(version="Latest"):
     return webdriver.Chrome(driver)
 
     
+
 
 
 
