@@ -670,10 +670,12 @@ def selenium_prep(version="Latest"):
         if "linux" in platform.system().lower():driver=driver.replace(".exe","")
         return webdriver.Chrome(driver)
 
+    print(f"Attempting to locate driver pulling from: {driver}")
     if "linux" in platform.system().lower():driver=driver.replace(".exe","")
     return webdriver.Chrome(driver)
 
     
+
 
 
 
