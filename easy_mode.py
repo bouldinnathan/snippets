@@ -666,12 +666,14 @@ def selenium_prep(version="Latest"):
         driver=[i for i in flatten(possible_drivers) if not "LICENSE" in i]
 
         driver=driver[0]
+        if "linux" in platform.system().lower():driver=driver.replace(".exe","")
         return webdriver.Chrome(driver)
 
-
+    if "linux" in platform.system().lower():driver=driver.replace(".exe","")
     return webdriver.Chrome(driver)
 
     
+
 
 
 
