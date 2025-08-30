@@ -665,6 +665,7 @@ def selenium_prep(version="Latest"):
         possible_drivers.append(zip_ref.namelist())
         driver=[i for i in flatten(possible_drivers) if not "LICENSE" in i]
 
+        print(f"Attempting to locate driver pulling from: {driver}")
         driver=driver[0]
         if "linux" in platform.system().lower():driver=driver.replace(".exe","")
         return webdriver.Chrome(driver)
@@ -673,6 +674,7 @@ def selenium_prep(version="Latest"):
     return webdriver.Chrome(driver)
 
     
+
 
 
 
