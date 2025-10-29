@@ -173,8 +173,9 @@ def generic_threader(function_name,datas,thread_count=16,max_cpu_percent=80,cpu=
             t = Thread(target=target, args=(qu, function_name, data,qu_bool))
             current_working_threads.append((t,qu,qu_bool))
             
-        if max_cpu_percent!=0:
-            while cpuChk(.2)>=max_cpu_percent:pass         
+        if max_cpu_percent != 0:
+            if type(cpuChk(.2))!=type(None) and type(max_cpu_percent)!=type(None):
+                while cpuChk(.2) >= max_cpu_percent: pass
         t.start()
             
 
@@ -675,6 +676,7 @@ def selenium_prep(version="Latest"):
     return webdriver.Chrome(driver)
 
     
+
 
 
 
