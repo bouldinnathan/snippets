@@ -12,6 +12,8 @@ The Easy Mode Python utility is a versatile script designed to simplify Python p
 - **API_gen**: A class for generating and managing API calls with rate limiting.
 - **Crypto**: Facilitates asynchronous API calls to cryptocurrency exchanges.
 - **Selenium_prep**: Assists in setting up Selenium WebDriver for automated web browsing.
+- **exponential_backoff**: Retries transient failures with capped delays, jitter, and cancellation.
+- **resolve_file_location**: Resolves local paths and already-mounted SMB locations, including KDE/KIOFuse.
 
 ## Installation
 
@@ -90,6 +92,98 @@ from easy_mode import selenium_prep
 # Download and setup Selenium WebDriver
 driver = selenium_prep(version="Latest")
 driver.get("https://google.com")
+```
+
+### Exponential backoff
+
+The new helpers require Python 3.10+ and use **only the standard library**.
+`easy_mode.py` imports each helper only when its function is called. Importing
+`easy_mode` does not load these modules or require their files for older APIs.
+No Pillow, NumPy, Flask, Selenium, or other optional packages are needed.
+
+Clone this repository, or keep `exponential_backoff.py` and/or `file_locations.py`
+beside `easy_mode.py` according to which functions you use. Each helper module
+also works independently of `easy_mode.py` and of the other helper.
+
+```python
+from easy_mode import exponential_backoff
+
+def read_report():
+    with open("report.csv", "rb") as report:
+        return report.read()
+
+data = exponential_backoff(
+    read_report,
+    retries=5,       # Additional attempts after the first call.
+    delay=1.0,       # 1, 2, 4, 8, 16 seconds, plus up to 20% jitter.
+    max_delay=30.0,  # Cap includes jitter.
+)
+```
+
+The default predicate retries transient filesystem/network errors such as
+timeouts, resets, stale handles, and temporary I/O errors. Missing files,
+permissions, and invalid input fail immediately. The final exception is raised
+unchanged. Retries reset for each call; there is no global counter.
+
+To customize retryable exceptions, pass `retry_if=lambda error: ...`. For custom
+logging, pass `on_retry(error, retry_number, delay_seconds, label)`, or set
+`on_retry=None` to silence it. For worker cancellation, pass a shared
+`threading.Event` as `stop_event`; setting it interrupts waits and raises
+`RetryCancelled`. It cannot forcibly interrupt an operation already in progress.
+
+Direct imports and shared worker settings are also available:
+
+```python
+from exponential_backoff import exponential_backoff, RetryPolicy, RetryCancelled
+
+policy = RetryPolicy(retries=5)
+# Use policy.run(operation, "description") across threads.
+# Call policy.stop.set() when shutting down.
+```
+
+### File and SMB locations
+
+```python
+from easy_mode import resolve_file_location
+
+file_path, source_uri = resolve_file_location("./report.csv")
+folder_path, source_uri = resolve_file_location(
+    "smb://reader@fileserver.example/books/Library With Spaces",
+    require_directory=True,
+)
+```
+
+The return value is `(pathlib.Path, canonical_smb_uri_or_None)`. Existing files
+and folders are accepted; `require_directory=True` restricts it to folders.
+Both literal spaces and URL-encoded names are supported. The helpers don't
+contain application-specific server addresses or book metadata.
+
+Linux discovery covers CIFS/SMB, GNOME/GVfs, and KDE/Dolphin KIOFuse, including
+changing per-session mount paths. Windows URLs use the current UNC connection.
+The resolver uses existing mounts: it never logs in, requests credentials,
+installs anything, or creates a mount. Run as the user that opened the share.
+
+For other mount systems, macOS, or manually mapped locations, pass
+`mount_path="/path/to/the/full/target"`. It must point to the complete supplied
+file/folder location, not merely the share root. Missing/inaccessible locations
+raise `ValueError`. Server aliases and IP addresses are matched as written;
+the resolver does not perform DNS lookups.
+
+You can also import directly with
+`from file_locations import resolve_file_location`. The helpers stay separate;
+backoff can wrap a subsequent read when needed:
+
+```python
+file_path, _ = resolve_file_location(
+    "smb://reader@fileserver.example/books/Library With Spaces/cover.jpg"
+)
+data = exponential_backoff(file_path.read_bytes, label="reading cover")
+```
+
+Run the helper tests without installing any packages:
+
+```sh
+python -m unittest discover -s tests -v
 ```
 
 ## Contributing

@@ -1,10 +1,33 @@
 #This is a file for easy imports and easy threading
-#version 0.7.7
+#version 0.7.8
 
 #function of import and install
 # Easy_installer.easy("flask") Easy_installer.easy("https://github.com")
 import os
 import subprocess
+
+
+def exponential_backoff(operation, **options):
+    """Retry a callable; load the standard-library-only helper on first use.
+
+    Requires exponential_backoff.py beside this file. Keyword options include
+    retries, delay, max_delay, jitter, stop_event, retry_if, and on_retry.
+    No optional packages are imported or installed by this function.
+    """
+    from exponential_backoff import exponential_backoff as run_with_backoff
+    return run_with_backoff(operation, **options)
+
+
+def resolve_file_location(location, mount_path=None, *, require_directory=False):
+    """Return (native Path, SMB URI or None), importing the resolver on use.
+
+    Requires file_locations.py beside this file. Accepts local files/folders
+    and already-mounted SMB URLs without logging in or installing packages.
+    """
+    from file_locations import resolve_file_location as resolve
+    return resolve(location, mount_path, require_directory=require_directory)
+
+
 class Easy_installer:
     
     def __init__(self):
